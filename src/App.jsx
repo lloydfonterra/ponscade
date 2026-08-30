@@ -70,26 +70,6 @@ function useMidnightUtc() {
   return clock;
 }
 
-function useEpochUtc() {
-  const [clock, setClock] = useState(() => epochClock());
-  useEffect(() => {
-    const id = setInterval(() => setClock(epochClock()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return clock;
-}
-
-function epochClock() {
-  const now = new Date();
-  const into = (now.getUTCMinutes() % 20) * 60 + now.getUTCSeconds();
-  let left = 20 * 60 - into;
-  if (left === 20 * 60) left = 0;
-  const m = Math.floor(left / 60);
-  const s = left % 60;
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${pad(m)}:${pad(s)}`;
-}
-
 function utcClock() {
   const now = new Date();
   const next = Date.UTC(
@@ -118,7 +98,6 @@ export default function App() {
   const [lastRun, setLastRun] = useState(null);
   const [copied, setCopied] = useState("");
   const payoutIn = useMidnightUtc();
-  const epochIn = useEpochUtc();
 
   const copyText = async (text, id) => {
     try {
@@ -334,7 +313,7 @@ export default function App() {
               <span>Pot preview · not live-read yet</span>
             </div>
             <div>
-              <b>{epochIn}</b>
+              <b>00:00</b>
               <span>Until the next 20-min claim window</span>
             </div>
             <div>
