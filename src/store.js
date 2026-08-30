@@ -22,6 +22,7 @@ function write(name, value) {
 }
 
 export const TURNS_PER_DAY = 10;
+export const CLAIM_MINUTES = 15;
 export const AIRDROP_MIN = 1_500_000;
 export const TOP_N = 10;
 export const TOP10_BPS = [20, 15, 12, 10, 9, 8, 7, 7, 6, 6];

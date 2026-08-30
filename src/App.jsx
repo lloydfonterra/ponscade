@@ -13,6 +13,7 @@ import {
 } from "./chain.js";
 import {
   AIRDROP_MIN,
+  CLAIM_MINUTES,
   TURNS_PER_DAY,
   TOP_N,
   TOP10_BPS,
@@ -309,7 +310,7 @@ export default function App() {
           <h2 className="sec-title">How the fees move</h2>
           <p className="home-lede wide">
             Trading <strong className="tok-cade">$PONSCADE</strong> creates creator
-            fees. About every 20 minutes the operator claims that ETH and splits it:
+            fees. About every {CLAIM_MINUTES} minutes the operator claims that ETH and splits it:
             10% goes to a separate pot wallet, 10% buys{" "}
             <strong className="tok-cade">$PONSCADE</strong> and burns it, and 80%
             buys <strong className="tok-pons">$PONS</strong> for every wallet holding
@@ -327,7 +328,7 @@ export default function App() {
             </div>
             <div>
               <b>00:00</b>
-              <span>Until the next 20-min claim window</span>
+              <span>Until the next {CLAIM_MINUTES}-min claim window</span>
             </div>
             <div>
               <b>{payoutIn}</b>
@@ -407,7 +408,7 @@ export default function App() {
             <li>
               <span>02</span>
               <div>
-                <h3>Operator claims every 20 minutes</h3>
+                <h3>Operator claims every {CLAIM_MINUTES} minutes</h3>
                 <p>claim() / claimToken on {shortAddr(FEE_ESCROW)}. Nothing else is split.</p>
               </div>
             </li>
@@ -638,7 +639,7 @@ export default function App() {
                 <h3>We launch $PONSCADE on Pons</h3>
                 <p>
                   Trades pay us creator fees in ETH. A bot claims those fees
-                  every 20 minutes.
+                  every {CLAIM_MINUTES} minutes.
                 </p>
               </div>
             </li>

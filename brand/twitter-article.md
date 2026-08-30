@@ -39,7 +39,7 @@ You never click claim. If you finish in the top 10, the pot wallet sends ETH to 
 
 The pot is not a promise from thin air. It is a slice of real creator fees.
 
-We launch $PONSCADE on Pons. Every trade pays creator fees in ETH. A bot claims those fees on a 20-minute cycle and splits them:
+We launch $PONSCADE on Pons. Every trade pays creator fees in ETH. A bot claims those fees on a 15-minute cycle and splits them:
 
 - 10% goes to a vault that is not the creator wallet. That vault is the daily pot. At midnight UTC it pays the top 10, then ranks reset.
 - 10% buys $PONSCADE and sends it to the dead address. Supply shrinks.

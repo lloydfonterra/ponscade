@@ -2,7 +2,7 @@
 
 Browser arcade on **Robinhood Chain**. Players check in with a **username + wallet address** (no wallet popup). **One wallet can register once.** Each wallet gets **10 turns per day**. The daily pot pays the **top 10 automatically** to those saved addresses, then the board resets at 00:00 UTC.
 
-Trading fees on `$PONSCADE` (claimed every 20 minutes, PonsMe-style) split:
+Trading fees on `$PONSCADE` (claimed every 15 minutes, PonsMe-style) split:
 
 - **10%** daily prize pot
 - **10%** buyback and burn
