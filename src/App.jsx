@@ -308,10 +308,15 @@ export default function App() {
           <p className="sec-kicker">The flywheel</p>
           <h2 className="sec-title">How the fees move</h2>
           <p className="home-lede wide">
-            About every 20 minutes the operator claims our Pons fees. Ten percent
-            stacks in a separate pot wallet. Ten percent burns $PONSCADE. Eighty
-            percent buys $PONS for holders with at least {AIRDROP_MIN.toLocaleString()} $PONSCADE.
-            At 00:00 UTC the pot pays the top {TOP_N}.{" "}
+            Trading <strong className="tok-cade">$PONSCADE</strong> creates creator
+            fees. About every 20 minutes the operator claims that ETH and splits it:
+            10% goes to a separate pot wallet, 10% buys{" "}
+            <strong className="tok-cade">$PONSCADE</strong> and burns it, and 80%
+            buys <strong className="tok-pons">$PONS</strong> for every wallet holding
+            at least <strong className="tok-min">{AIRDROP_MIN.toLocaleString()}</strong>{" "}
+            <strong className="tok-cade">$PONSCADE</strong>. Hold more than the
+            minimum and your share is larger. At 00:00 UTC the pot pays the top{" "}
+            {TOP_N} players.{" "}
             <strong>No staking. No claiming. No signing.</strong>
           </p>
 
