@@ -253,7 +253,12 @@ export default function App() {
             <h1 className="poster">Ponscade</h1>
             <p className="home-sub">Hold. Play. Win the pot.</p>
             <p className="home-lede">
-              80% of our Pons fees buy <strong className="tok-pons">$PONS</strong> and go to{" "}
+              Every Ponscade fee is split <strong className="tok-min">10% pot</strong>
+              {" · "}
+              <strong className="tok-min">10% burn</strong>
+              {" · "}
+              <strong className="tok-min">80%</strong> buys{" "}
+              <strong className="tok-pons">$PONS</strong> for{" "}
               <strong className="tok-cade">$PONSCADE</strong> holders.
               The more you hold, the larger your share — minimum{" "}
               <strong className="tok-min">{AIRDROP_MIN.toLocaleString()}</strong>{" "}
