@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   PONSCADE_TOKEN,
   PONS_TOKEN,
+  CLAIMER_ADDRESS,
   OPERATOR_ADDRESS,
   POT_ADDRESS,
   FEE_ESCROW,
@@ -310,7 +311,7 @@ export default function App() {
           <h2 className="sec-title">How the fees move</h2>
           <p className="home-lede wide">
             Trading <strong className="tok-cade">$PONSCADE</strong> creates creator
-            fees. About every {CLAIM_MINUTES} minutes the operator claims that ETH and splits it:
+            fees. About every {CLAIM_MINUTES} minutes the fee claimer claims that ETH. The operator then splits it:
             10% goes to a separate pot wallet, 10% buys{" "}
             <strong className="tok-cade">$PONSCADE</strong> and burns it, and 80%
             buys <strong className="tok-pons">$PONS</strong> for every wallet holding
@@ -365,16 +366,23 @@ export default function App() {
           </ol>
 
           <p className="sec-kicker">The vaults</p>
-          <h2 className="sec-title">Two wallets, never the same</h2>
+          <h2 className="sec-title">Three wallets, never the same</h2>
           <p className="home-lede wide">
-            Fees hit the operator. Ten percent leaves for a vault that only pays
-            the board. Both are on Blockscout.
+            Fees land on the claimer. The operator runs the split. The pot only
+            pays the board. Three keys. Three jobs.
           </p>
           <div className="vaults">
             <AddrCard
+              label="Fee claimer"
+              addr={CLAIMER_ADDRESS}
+              note="Receives creator fees. Calls claim(). Does not hold the pot."
+              copied={copied === "claim"}
+              onCopy={() => copyText(CLAIMER_ADDRESS, "claim")}
+            />
+            <AddrCard
               label="Operator"
               addr={OPERATOR_ADDRESS}
-              note="Claims creator fees. Runs the split. Not the prize vault."
+              note="Runs the 10 / 10 / 80 split. Not the fee inbox. Not the prize vault."
               copied={copied === "op"}
               onCopy={() => copyText(OPERATOR_ADDRESS, "op")}
             />
@@ -408,8 +416,8 @@ export default function App() {
             <li>
               <span>02</span>
               <div>
-                <h3>Operator claims every {CLAIM_MINUTES} minutes</h3>
-                <p>claim() / claimToken on {shortAddr(FEE_ESCROW)}. Nothing else is split.</p>
+                <h3>Fee claimer claims every {CLAIM_MINUTES} minutes</h3>
+                <p>claim() / claimToken on {shortAddr(FEE_ESCROW)} from {shortAddr(CLAIMER_ADDRESS)}. The operator splits after that.</p>
               </div>
             </li>
             <li>
