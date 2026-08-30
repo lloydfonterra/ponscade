@@ -72,12 +72,8 @@ button { font-family: inherit; }
   background: none; border: 0; cursor: pointer; padding: 0;
 }
 .logo .mark {
-  width: 26px; height: 26px; display: grid; place-items: center;
-  clip-path: polygon(6px 0, 100% 0, 100% 20px, 20px 100%, 0 100%, 0 6px);
-  background: var(--cyan);
-  color: #041018;
-  font-family: var(--hud); font-weight: 400; font-size: 14px; font-style: normal;
-  box-shadow: 0 0 16px rgba(0, 229, 255, 0.45);
+  width: 32px; height: 32px; display: block; object-fit: contain;
+  clip-path: none; background: none; box-shadow: none; border-radius: 0;
 }
 .logo span {
   font-family: var(--hud);
@@ -146,8 +142,7 @@ nav button.on {
   text-shadow: none; color: #eef2f6;
 }
 .app[data-view="land"] .logo .mark {
-  background: #5eead4; color: #061018; box-shadow: none;
-  clip-path: none; border-radius: 8px;
+  background: none; box-shadow: none; clip-path: none; border-radius: 0;
 }
 .app[data-view="land"] nav button,
 .app[data-view="land"] a.x-link,

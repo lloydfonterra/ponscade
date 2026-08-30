@@ -232,7 +232,7 @@ export default function App() {
       {chrome && (
         <header className="top">
           <button className="logo" onClick={() => { setView("land"); setActive(null); }}>
-            <i className="mark">P</i>
+            <img className="mark" src="/logo.png" alt="" />
             <span>PONSCADE</span>
           </button>
           <nav>
