@@ -372,26 +372,13 @@ export default function App() {
               onCopy={() => copyText(POT_ADDRESS, "pot")}
             />
           </div>
-          <div className="addr-grid">
-            <AddrCard
-              label="$PONS buy target"
-              addr={PONS_TOKEN}
-              note="80% of each claim buys this. Airdropped to holders ≥ 666,666 $PONSCADE."
-              href={explorerToken(PONS_TOKEN)}
-              copied={copied === "pons"}
-              onCopy={() => copyText(PONS_TOKEN, "pons")}
-            />
-            <AddrCard
-              label="Fee escrow"
-              addr={FEE_ESCROW}
-              note="After sweepFees on the curve. claim() and claimToken(address)."
-              copied={copied === "escrow"}
-              onCopy={() => copyText(FEE_ESCROW, "escrow")}
-            />
-          </div>
           <p className="home-note">
-            Factory {shortAddr(PONS_FACTORY)} · dead {shortAddr(DEAD_ADDRESS)} ·{" "}
-            <a href={explorerAddress(PONS_FACTORY)} target="_blank" rel="noreferrer">Blockscout</a>
+            $PONS{" "}
+            <a href={explorerToken(PONS_TOKEN)} target="_blank" rel="noreferrer">{shortAddr(PONS_TOKEN)}</a>
+            {" "}· fee escrow{" "}
+            <a href={explorerAddress(FEE_ESCROW)} target="_blank" rel="noreferrer">{shortAddr(FEE_ESCROW)}</a>
+            {" "}· factory{" "}
+            <a href={explorerAddress(PONS_FACTORY)} target="_blank" rel="noreferrer">{shortAddr(PONS_FACTORY)}</a>
           </p>
 
           <p className="sec-kicker" id="protocol">How it works</p>
