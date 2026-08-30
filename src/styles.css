@@ -189,6 +189,9 @@ nav button.on {
 }
 .home-lede.wide { max-width: 62ch; margin-left: 0; text-align: left; }
 .home-lede strong { color: #eef2f6; font-weight: 700; }
+.tok-pons { color: #ffb020; }
+.tok-cade { color: #5eead4; }
+.tok-min { color: #f7f9fc; }
 .ca-row { display: flex; justify-content: center; }
 .ca-pill {
   display: inline-flex; align-items: center; gap: 10px;

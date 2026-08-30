@@ -23,7 +23,7 @@ export const FEE_ESCROW = "0xd3AFEB2a57f70eF218Aa82451c51B2fb0416Ac9e";
 export const PONS_FACTORY = "0x7eD598BcEf8bd9Edd8C97A195C6d13f40801EC7e";
 export const DEAD_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 export const EXPLORER = ROBINHOOD.blockExplorerUrls[0];
-export const AIRDROP_MIN_HOLD = 666_666;
+export const AIRDROP_MIN_HOLD = 1_500_000;
 
 export function explorerAddress(addr) {
   return `${EXPLORER}/address/${addr}`;

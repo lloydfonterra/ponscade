@@ -7,7 +7,6 @@ import {
   FEE_ESCROW,
   PONS_FACTORY,
   DEAD_ADDRESS,
-  ROBINHOOD,
   shortAddr,
   explorerAddress,
   explorerToken,
@@ -254,9 +253,11 @@ export default function App() {
             <h1 className="poster">Ponscade</h1>
             <p className="home-sub">Hold. Play. Win the pot.</p>
             <p className="home-lede">
-              80% of our Pons fees buy $PONS and go to $PONSCADE holders.
+              80% of our Pons fees buy <strong className="tok-pons">$PONS</strong> and go to{" "}
+              <strong className="tok-cade">$PONSCADE</strong> holders.
               The more you hold, the larger your share — minimum{" "}
-              {AIRDROP_MIN.toLocaleString()} $PONSCADE. Play the free arcade
+              <strong className="tok-min">{AIRDROP_MIN.toLocaleString()}</strong>{" "}
+              <strong className="tok-cade">$PONSCADE</strong>. Play the free arcade
               for the midnight pot. One wallet, one name. No connect.
             </p>
             <div className="home-cta">
