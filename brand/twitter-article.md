@@ -7,7 +7,7 @@ Type a name. Type a wallet. Never connect.
 10 turns a day. Top 10 get paid automatically at midnight UTC.
 
 Trades on $PONSCADE feed a flywheel:
-10% daily pot · 10% buyback & burn · 80% $PONS to holders with 666,666+
+10% daily pot · 10% buyback & burn · 80% $PONS to holders with 1,500,000+
 
 Article below. Cabinet opens soon.
 
@@ -43,7 +43,7 @@ We launch $PONSCADE on Pons. Every trade pays creator fees in ETH. A bot claims 
 
 - 10% goes to a vault that is not the creator wallet. That vault is the daily pot. At midnight UTC it pays the top 10, then ranks reset.
 - 10% buys $PONSCADE and sends it to the dead address. Supply shrinks.
-- 80% buys $PONS and airdrops it to every wallet holding at least 666,666 $PONSCADE. Below that line, nothing.
+- 80% buys $PONS and airdrops it to every wallet holding at least 1,500,000 $PONSCADE. Below that line, nothing.
 
 $PONS on Robinhood Chain: 0x39dBED3a2bd333467115dE45665cC57F813C4571
 
