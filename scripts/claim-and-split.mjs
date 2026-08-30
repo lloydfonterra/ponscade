@@ -27,10 +27,12 @@ function loadEnv() {
 const env = loadEnv();
 const RPC = env.ROBINHOOD_RPC || "https://rpc.mainnet.chain.robinhood.com";
 const EXPLORER = "https://robinhoodchain.blockscout.com";
+const CLAIMER = env.CLAIMER_ADDRESS;
+const CLAIMER_KEY = env.CLAIMER_PRIVATE_KEY;
 const OPERATOR = env.OPERATOR_ADDRESS;
 const KEY = env.OPERATOR_PRIVATE_KEY;
 const TOKEN = env.PONSCADE_TOKEN;
-const CURVE = env.PONSCADE_CURVE;
+let CURVE = env.PONSCADE_CURVE;
 const POT = env.POT_ADDRESS;
 const PONS = env.PONS_TOKEN;
 const AIRDROP_MIN = BigInt(env.AIRDROP_MIN || "1500000") * 10n ** 18n;
@@ -54,7 +56,13 @@ const publicClient = createPublicClient({
   chain: robinhood,
   transport: http(RPC),
 });
+const claimAccount = privateKeyToAccount(CLAIMER_KEY);
 const account = privateKeyToAccount(KEY);
+const claimWallet = createWalletClient({
+  account: claimAccount,
+  chain: robinhood,
+  transport: http(RPC),
+});
 const wallet = createWalletClient({
   account,
   chain: robinhood,
@@ -202,12 +210,15 @@ function log(title, obj) {
 }
 
 async function main() {
+  if (claimAccount.address.toLowerCase() !== CLAIMER.toLowerCase()) {
+    throw new Error("Claimer key does not match CLAIMER_ADDRESS");
+  }
   if (account.address.toLowerCase() !== OPERATOR.toLowerCase()) {
     throw new Error("Operator key does not match OPERATOR_ADDRESS");
   }
 
   const [ethBefore, launch, escrowAddr, escrowEth, escrowToken] = await Promise.all([
-    publicClient.getBalance({ address: OPERATOR }),
+    publicClient.getBalance({ address: CLAIMER }),
     publicClient.readContract({
       address: FACTORY,
       abi: factoryAbi,
@@ -223,15 +234,16 @@ async function main() {
       address: ESCROW,
       abi: escrowAbi,
       functionName: "balanceOf",
-      args: [OPERATOR],
+      args: [CLAIMER],
     }),
     publicClient.readContract({
       address: ESCROW,
       abi: escrowAbi,
       functionName: "balanceOfToken",
-      args: [OPERATOR, TOKEN],
+      args: [CLAIMER, TOKEN],
     }),
   ]);
+  if (!CURVE && launch?.curve) CURVE = launch.curve;
 
   const curveReads = await Promise.all([
     tryRead("quoteFeeBalance", () =>
@@ -257,6 +269,7 @@ async function main() {
 
   log("STATE", {
     mode: DRY ? "probe" : "execute",
+    claimer: CLAIMER,
     operator: OPERATOR,
     token: TOKEN,
     curve: CURVE,
@@ -266,7 +279,7 @@ async function main() {
     creatorFeeRecipient: launch.creatorFeeRecipient,
     pairToken: launch.pairToken,
     buybackEnabled: launch.buybackEnabled,
-    operatorEth: `${formatEther(ethBefore)} ETH`,
+    claimerEth: `${formatEther(ethBefore)} ETH`,
     escrowEth: `${formatEther(escrowEth)} ETH`,
     escrowToken: formatUnits(escrowToken, 18),
     ponsPool: poolInfo ? `${poolInfo.pool} fee=${poolInfo.fee}` : "NONE",
@@ -279,7 +292,7 @@ async function main() {
     );
   }
   console.log("");
-  console.log("ELIGIBLE (>= 666,666 PONSCADE, curve excluded)");
+  console.log("ELIGIBLE (>= 1,500,000 PONSCADE, curve excluded)");
   for (const h of eligible) {
     console.log(`  ${h.address}  ${formatUnits(h.raw, 18)}`);
   }
@@ -304,9 +317,9 @@ async function main() {
     return;
   }
 
-  if (unswept > 0n) {
+  if (unswept > 0n && CURVE) {
     console.log(`sweeping unswept curve fees ~${formatEther(unswept)} ETH`);
-    const hash = await wallet.writeContract({
+    const hash = await claimWallet.writeContract({
       address: CURVE,
       abi: curveAbi,
       functionName: "sweepFees",
@@ -320,15 +333,16 @@ async function main() {
     address: ESCROW,
     abi: escrowAbi,
     functionName: "balanceOf",
-    args: [OPERATOR],
+    args: [CLAIMER],
   });
   console.log(`escrow after sweep: ${formatEther(owedAfterSweep)} ETH`);
 
   if (owedAfterSweep === 0n) {
-    throw new Error("Nothing to claim. Need $PONSCADE trades so creator fees accrue.");
+    console.log("Nothing to claim this window.");
+    return;
   }
 
-  const hashClaim = await wallet.writeContract({
+  const hashClaim = await claimWallet.writeContract({
     address: ESCROW,
     abi: escrowAbi,
     functionName: "claim",
@@ -338,6 +352,9 @@ async function main() {
   if (claimRcpt.status !== "success") throw new Error("claim reverted");
 
   const claimed = owedAfterSweep;
+  const hashFwd = await claimWallet.sendTransaction({ to: OPERATOR, value: claimed });
+  console.log(`forward ${formatEther(claimed)} ETH -> operator  ${EXPLORER}/tx/${hashFwd}`);
+  await publicClient.waitForTransactionReceipt({ hash: hashFwd });
   const potAmt = (claimed * 10n) / 100n;
   const buyAmt = (claimed * 80n) / 100n;
   console.log(`claimed ${formatEther(claimed)} ETH`);

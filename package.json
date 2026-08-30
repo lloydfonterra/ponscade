@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "claim:loop": "node scripts/loop-claim.mjs"
   },
   "dependencies": {
     "react": "^19.1.1",
