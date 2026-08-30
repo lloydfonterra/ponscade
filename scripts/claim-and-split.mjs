@@ -9,6 +9,7 @@ import {
   http,
   parseAbi,
   parseAbiItem,
+  parseEther,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
@@ -44,7 +45,10 @@ const V3_FACTORY = "0x1f7d7550B1b028f7571E69A784071F0205FD2EfA";
 const SWAP_ROUTER = "0xCaf681a66D020601342297493863E78C959E5cb2";
 const QUOTER = "0x33e885eD0Ec9bF04EcfB19341582aADCb4c8A9E7";
 const FEES = [100, 500, 3000, 10000];
+const DEAD = "0x000000000000000000000000000000000000dEaD";
+const BPS = 10_000n;
 const DRY = process.argv.includes("--probe");
+const BURN_ONLY = process.argv.includes("--burn-only");
 
 const robinhood = defineChain({
   id: 4663,
@@ -86,6 +90,10 @@ const curveAbi = parseAbi([
   "function feeBps() view returns (uint256)",
   "function creatorTaxBps() view returns (uint256)",
   "function graduated() view returns (bool)",
+  "function buy(uint256 quoteIn, uint256 minTokensOut, address recipient) payable returns (uint256 tokensOut)",
+  "function getReserves() view returns (uint256 quoteReserve, uint256 tokenReserve)",
+  "function sellableTokens() view returns (uint256)",
+  "function currentSnipeTaxBps(address recipient) view returns (uint256)",
 ]);
 const erc20Abi = parseAbi([
   "function balanceOf(address) view returns (uint256)",
@@ -182,6 +190,86 @@ async function findPonsPool() {
   return found[0];
 }
 
+function amountOut(inAmount, reserveIn, reserveOut) {
+  return (inAmount * reserveOut) / (reserveIn + inAmount);
+}
+
+async function quoteCurveBuy(quoteIn, recipient) {
+  const [reserves, sellable, feeBps, creatorTaxBps, rawSnipeBps] = await Promise.all([
+    publicClient.readContract({ address: CURVE, abi: curveAbi, functionName: "getReserves" }),
+    publicClient.readContract({ address: CURVE, abi: curveAbi, functionName: "sellableTokens" }),
+    publicClient.readContract({ address: CURVE, abi: curveAbi, functionName: "feeBps" }),
+    publicClient.readContract({ address: CURVE, abi: curveAbi, functionName: "creatorTaxBps" }),
+    publicClient.readContract({
+      address: CURVE,
+      abi: curveAbi,
+      functionName: "currentSnipeTaxBps",
+      args: [recipient],
+    }),
+  ]);
+  const [quoteReserve, tokenReserve] = reserves;
+  let snipeBps = rawSnipeBps;
+  const maxSnipe = BPS - feeBps - creatorTaxBps - 100n;
+  if (snipeBps > maxSnipe) snipeBps = maxSnipe > 0n ? maxSnipe : 0n;
+  const net =
+    quoteIn -
+    (quoteIn * feeBps) / BPS -
+    (quoteIn * creatorTaxBps) / BPS -
+    (quoteIn * snipeBps) / BPS;
+  let tokensOut = amountOut(net, quoteReserve, tokenReserve);
+  if (tokensOut > sellable) tokensOut = sellable;
+  return { tokensOut, snipeBps };
+}
+
+async function burnPonscade(quoteIn) {
+  if (quoteIn === 0n || !CURVE) return { hash: "", bought: 0n };
+  const gasReserve = parseEther("0.003");
+  const eth = await publicClient.getBalance({ address: OPERATOR });
+  if (eth < quoteIn + gasReserve) {
+    throw new Error(
+      `Operator needs ${formatEther(quoteIn + gasReserve)} ETH (burn + gas). Has ${formatEther(eth)}`,
+    );
+  }
+  const tokenBefore = await publicClient.readContract({
+    address: TOKEN,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: [OPERATOR],
+  });
+  const quoted = await quoteCurveBuy(quoteIn, OPERATOR);
+  const minOut = (quoted.tokensOut * 95n) / 100n;
+  console.log(`burn 10% ${formatEther(quoteIn)} ETH`);
+  console.log(`quote ${formatUnits(quoted.tokensOut, 18)} PONSCADE  snipe ${quoted.snipeBps} bps`);
+  const hashBuy = await wallet.writeContract({
+    address: CURVE,
+    abi: curveAbi,
+    functionName: "buy",
+    args: [quoteIn, minOut, OPERATOR],
+    value: quoteIn,
+  });
+  console.log(`  curve buy ${EXPLORER}/tx/${hashBuy}`);
+  const buyRcpt = await publicClient.waitForTransactionReceipt({ hash: hashBuy });
+  if (buyRcpt.status !== "success") throw new Error("PONSCADE burn buy reverted");
+  const tokenAfter = await publicClient.readContract({
+    address: TOKEN,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: [OPERATOR],
+  });
+  const bought = tokenAfter - tokenBefore;
+  if (bought <= 0n) throw new Error("Burn buy did not increase PONSCADE");
+  const hashBurn = await wallet.writeContract({
+    address: TOKEN,
+    abi: erc20Abi,
+    functionName: "transfer",
+    args: [DEAD, bought],
+  });
+  console.log(`  burn ${formatUnits(bought, 18)} PONSCADE  ${EXPLORER}/tx/${hashBurn}`);
+  const burnRcpt = await publicClient.waitForTransactionReceipt({ hash: hashBurn });
+  if (burnRcpt.status !== "success") throw new Error("transfer to dead reverted");
+  return { hash: hashBurn, bought };
+}
+
 async function quotePons(amountIn, fee) {
   const { result } = await publicClient.simulateContract({
     address: QUOTER,
@@ -245,6 +333,14 @@ async function main() {
     }),
   ]);
   if (!CURVE && launch?.curve) CURVE = launch.curve;
+  if (BURN_ONLY) {
+    const raw = process.argv[process.argv.indexOf("--burn-only") + 1];
+    if (!raw) throw new Error("Usage: node scripts/claim-and-split.mjs --burn-only 0.0245");
+    const amt = parseEther(raw);
+    const out = await burnPonscade(amt);
+    console.log(`catch-up burn done  ${out.hash}`);
+    return;
+  }
 
   const curveReads = await Promise.all([
     tryRead("quoteFeeBalance", () =>
@@ -320,6 +416,8 @@ async function main() {
 
   let hashSweep = "";
   let hashPot = "";
+  let hashBurn = "";
+  let burnedTokens = 0n;
   if (unswept > 0n && CURVE) {
     console.log(`sweeping unswept curve fees ~${formatEther(unswept)} ETH`);
     hashSweep = await claimWallet.writeContract({
@@ -360,15 +458,22 @@ async function main() {
   await publicClient.waitForTransactionReceipt({ hash: hashFwd });
   const potAmt = (claimed * 10n) / 100n;
   const buyAmt = (claimed * 80n) / 100n;
+  const burnAmt = claimed - potAmt - buyAmt;
   console.log(`claimed ${formatEther(claimed)} ETH`);
   console.log(`pot 10% ${formatEther(potAmt)} ETH -> ${POT}`);
+  console.log(`burn 10% ${formatEther(burnAmt)} ETH -> $PONSCADE then dead`);
   console.log(`buy 80% ${formatEther(buyAmt)} ETH -> PONS`);
-  console.log(`hold 10% ${formatEther(claimed - potAmt - buyAmt)} ETH (burn later)`);
 
   if (potAmt > 0n) {
     hashPot = await wallet.sendTransaction({ to: POT, value: potAmt });
     console.log(`pot send ${EXPLORER}/tx/${hashPot}`);
     await publicClient.waitForTransactionReceipt({ hash: hashPot });
+  }
+
+  if (burnAmt > 0n) {
+    const burned = await burnPonscade(burnAmt);
+    hashBurn = burned.hash;
+    burnedTokens = burned.bought;
   }
 
   if (buyAmt === 0n) {
@@ -483,6 +588,8 @@ async function main() {
         at: new Date().toISOString(),
         claimedEth: formatEther(claimed),
         potEth: formatEther(potAmt),
+        burnEth: formatEther(burnAmt),
+        burnedPonscade: formatUnits(burnedTokens, 18),
         ponsBought: formatUnits(ponsBal, 18),
         holders: eligible.length,
         minHold: 1_500_000,
@@ -491,6 +598,7 @@ async function main() {
           claim: hashClaim,
           forward: hashFwd,
           pot: hashPot,
+          burn: hashBurn,
           swap: hashSwap,
         },
         airdrops,
@@ -499,6 +607,31 @@ async function main() {
       2,
     ),
   );
+  addFlywheelPons(formatUnits(sent, 18));
+}
+
+function tokenToWei(s) {
+  const [w, f = ""] = String(s).split(".");
+  return BigInt((w || "0") + (f + "000000000000000000").slice(0, 18));
+}
+
+function addFlywheelPons(delta) {
+  const path = fileURLToPath(new URL("../public/flywheel.json", import.meta.url));
+  let prev = { ponsDistributed: "0", windows: 0 };
+  try {
+    prev = JSON.parse(readFileSync(path, "utf8"));
+  } catch {
+    // first run
+  }
+  const next = {
+    ponsDistributed: formatUnits(
+      tokenToWei(prev.ponsDistributed || "0") + tokenToWei(delta),
+      18,
+    ),
+    windows: (prev.windows || 0) + 1,
+    updatedAt: new Date().toISOString(),
+  };
+  writeFileSync(path, JSON.stringify(next, null, 2));
 }
 
 main().catch((err) => {

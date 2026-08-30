@@ -40,6 +40,55 @@ export function explorerToken(addr) {
 export function explorerTx(hash) {
   return `${EXPLORER}/tx/${hash}`;
 }
+
+export function explorerTokenHolder(token, holder) {
+  return `${EXPLORER}/token/${token}?a=${holder}`;
+}
+
+async function rpc(method, params) {
+  const res = await fetch(ROBINHOOD.rpcUrls[0], {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+  });
+  if (!res.ok) throw new Error(`RPC ${res.status}`);
+  const json = await res.json();
+  if (json.error) throw new Error(json.error.message || "RPC error");
+  return json.result;
+}
+
+function formatUnits18(wei) {
+  const neg = wei < 0n;
+  const abs = neg ? -wei : wei;
+  const s = abs.toString().padStart(19, "0");
+  const whole = s.slice(0, -18);
+  const frac = s.slice(-18).replace(/0+$/, "");
+  const out = frac ? `${whole}.${frac}` : whole;
+  return neg ? `-${out}` : out;
+}
+
+export async function readEthBalance(addr) {
+  const hex = await rpc("eth_getBalance", [addr, "latest"]);
+  return BigInt(hex);
+}
+
+export async function readTokenBalance(token, owner) {
+  const data = ERC20_BALANCE + padAddress(owner);
+  const hex = await rpc("eth_call", [{ to: token, data }, "latest"]);
+  if (!hex || hex === "0x") return 0n;
+  return BigInt(hex);
+}
+
+export async function readLiveVaults() {
+  const [potWei, burnedWei] = await Promise.all([
+    readEthBalance(POT_ADDRESS),
+    readTokenBalance(PONSCADE_TOKEN, DEAD_ADDRESS),
+  ]);
+  return {
+    potEth: formatUnits18(potWei),
+    burnedPonscade: formatUnits18(burnedWei),
+  };
+}
 export const PONSME_TOKEN = "0xe4d7c9fc56fa0dea5099734bbdf657193c6ec384";
 
 const ERC20_BALANCE = "0x70a08231";

@@ -12,6 +12,8 @@ import {
   explorerAddress,
   explorerToken,
   explorerTx,
+  explorerTokenHolder,
+  readLiveVaults,
 } from "./chain.js";
 import {
   AIRDROP_MIN,
@@ -26,7 +28,6 @@ import {
   loadBoard,
   loadDay,
   loadSession,
-  prizeSplit,
   recordRun,
   registerOrEnter,
   spendPlay,
@@ -60,7 +61,6 @@ const GAMES = {
   },
 };
 
-const DAILY_BUDGET = 12000;
 const X_URL = "https://x.com/PonscadeRH";
 
 function useEpochUtc() {
@@ -123,6 +123,7 @@ export default function App() {
   const payoutIn = useMidnightUtc();
   const epochIn = useEpochUtc();
   const [lastClaim, setLastClaim] = useState(null);
+  const flywheel = useFlywheel();
   useEffect(() => {
     fetch("/last-claim.json")
       .then((r) => (r.ok ? r.json() : null))
@@ -142,7 +143,10 @@ export default function App() {
 
   const remaining = Math.max(0, TURNS_PER_DAY - day.used);
   const mine = dailyScore(day);
-  const prizes = prizeSplit(DAILY_BUDGET);
+  const potEthNum = Number(flywheel?.potEth);
+  const prizes = TOP10_BPS.map((pct) =>
+    Number.isFinite(potEthNum) ? (potEthNum * pct) / 100 : 0,
+  );
 
   useEffect(() => {
     if (!session) return;
@@ -352,11 +356,34 @@ export default function App() {
             <strong>No staking. No claiming. No signing.</strong>
           </p>
 
+          <div className="stat-xl flywheel-live">
+            <a
+              href={explorerAddress(POT_ADDRESS)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <b>{fmtHud(flywheel?.potEth, { eth: true })}</b>
+              <span>ETH in the midnight pot</span>
+            </a>
+            <a
+              href={explorerTokenHolder(PONSCADE_TOKEN, DEAD_ADDRESS)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <b>{fmtHud(flywheel?.burnedPonscade, { compact: true })}</b>
+              <span>$PONSCADE burned</span>
+            </a>
+            <a
+              href={explorerToken(PONS_TOKEN)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <b>{fmtHud(flywheel?.ponsDistributed)}</b>
+              <span>$PONS sent to holders</span>
+            </a>
+          </div>
+
           <div className="stat-xl">
-            <div>
-              <b>{DAILY_BUDGET.toLocaleString()}</b>
-              <span>Pot preview · not live-read yet</span>
-            </div>
             <div>
               <b>{epochIn}</b>
               <span>Until the next {CLAIM_MINUTES}-min claim window</span>
@@ -559,12 +586,12 @@ export default function App() {
 
             <div className="pot-card">
               <span className="pot-label">Daily pot</span>
-              <strong>{DAILY_BUDGET.toLocaleString()}</strong>
-              <p className="pot-hint">10% of claimed fees</p>
+              <strong>{fmtHud(flywheel?.potEth, { eth: true })}</strong>
+              <p className="pot-hint">Live ETH in the prize vault</p>
               <div className="pot-track" aria-hidden>
                 <i />
               </div>
-              <p className="pot-foot">Resets midnight UTC</p>
+              <p className="pot-foot">Pays top {TOP_N} at 00:00 UTC</p>
             </div>
           </div>
 
@@ -787,21 +814,71 @@ function fmtAmt(n) {
   return x.toLocaleString(undefined, { maximumFractionDigits: 4 });
 }
 
+function fmtHud(n, opts = {}) {
+  if (n == null || n === "") return "…";
+  const x = Number(n);
+  if (!Number.isFinite(x)) return "…";
+  if (opts.compact && x >= 1_000_000) {
+    return `${(x / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 2 })}M`;
+  }
+  if (opts.eth) {
+    const digits = opts.digits ?? (x >= 1 ? 4 : 4);
+    return `${x.toLocaleString(undefined, { maximumFractionDigits: digits })} ETH`;
+  }
+  return x.toLocaleString(undefined, {
+    maximumFractionDigits: x >= 100 ? 0 : 2,
+  });
+}
+
+function useFlywheel() {
+  const [stats, setStats] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      const [vaults, file] = await Promise.all([
+        readLiveVaults().catch(() => null),
+        fetch("/flywheel.json")
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null),
+      ]);
+      if (!alive) return;
+      setStats((prev) => ({
+        potEth: vaults?.potEth ?? prev?.potEth ?? null,
+        burnedPonscade: vaults?.burnedPonscade ?? prev?.burnedPonscade ?? null,
+        ponsDistributed: file?.ponsDistributed ?? prev?.ponsDistributed ?? null,
+      }));
+    };
+    load();
+    const id = setInterval(load, 30_000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, []);
+  return stats;
+}
+
 function LastDrop({ data }) {
   if (!data?.airdrops?.length) return null;
   const when = data.at ? new Date(data.at).toUTCString() : "";
   const links = [
     ["Claim", data.txs?.claim],
     ["Pot 10%", data.txs?.pot],
+    ["Burn 10%", data.txs?.burn],
     ["Buy $PONS", data.txs?.swap],
   ].filter(([, h]) => h);
+  const burnLine = data.burnedPonscade
+    ? ` 10% bought and burned ${fmtAmt(data.burnedPonscade)} $PONSCADE.`
+    : data.txs?.burn
+      ? " 10% buy-and-burn is on-chain."
+      : "";
   return (
     <div className="last-drop">
       <p className="sec-kicker">Last 15 minutes</p>
       <h2 className="sec-title">Proof of the split</h2>
       <p className="home-lede wide">
         Claimed <strong className="tok-min">{fmtAmt(data.claimedEth)} ETH</strong>.
-        10% to the pot. 80% bought{" "}
+        10% to the pot.{burnLine} 80% bought{" "}
         <strong className="tok-pons">{fmtAmt(data.ponsBought)} $PONS</strong>{" "}
         for {data.holders} holders with at least{" "}
         {Number(data.minHold).toLocaleString()} $PONSCADE.
@@ -921,7 +998,7 @@ function BoardTable({ board, prizes, highlight }) {
               <td>{row.score.toLocaleString()}</td>
               <td>
                 <span className="share">
-                  +{prizes[i].toLocaleString()}
+                  +{fmtHud(prizes[i], { eth: true, digits: 5 })}
                   <em>· {TOP10_BPS[i]}%</em>
                 </span>
               </td>
