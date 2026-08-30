@@ -11,6 +11,7 @@ import {
   shortAddr,
   explorerAddress,
   explorerToken,
+  explorerTx,
 } from "./chain.js";
 import {
   AIRDROP_MIN,
@@ -121,6 +122,13 @@ export default function App() {
   const [copied, setCopied] = useState("");
   const payoutIn = useMidnightUtc();
   const epochIn = useEpochUtc();
+  const [lastClaim, setLastClaim] = useState(null);
+  useEffect(() => {
+    fetch("/last-claim.json")
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setLastClaim)
+      .catch(() => setLastClaim(null));
+  }, []);
 
   const copyText = async (text, id) => {
     try {
@@ -362,6 +370,8 @@ export default function App() {
               <span>Turns per wallet per day</span>
             </div>
           </div>
+
+          <LastDrop data={lastClaim} />
 
           <ol className="rules">
             <li>
@@ -767,6 +777,56 @@ export default function App() {
       <footer>
         Ponscade 2026 of Ponsfamily
       </footer>
+    </div>
+  );
+}
+
+function fmtAmt(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return n;
+  return x.toLocaleString(undefined, { maximumFractionDigits: 4 });
+}
+
+function LastDrop({ data }) {
+  if (!data?.airdrops?.length) return null;
+  const when = data.at ? new Date(data.at).toUTCString() : "";
+  const links = [
+    ["Claim", data.txs?.claim],
+    ["Pot 10%", data.txs?.pot],
+    ["Buy $PONS", data.txs?.swap],
+  ].filter(([, h]) => h);
+  return (
+    <div className="last-drop">
+      <p className="sec-kicker">Last 15 minutes</p>
+      <h2 className="sec-title">Proof of the split</h2>
+      <p className="home-lede wide">
+        Claimed <strong className="tok-min">{fmtAmt(data.claimedEth)} ETH</strong>.
+        10% to the pot. 80% bought{" "}
+        <strong className="tok-pons">{fmtAmt(data.ponsBought)} $PONS</strong>{" "}
+        for {data.holders} holders with at least{" "}
+        {Number(data.minHold).toLocaleString()} $PONSCADE.
+        {when ? ` ${when}.` : ""}
+      </p>
+      <div className="drop-links">
+        {links.map(([label, hash]) => (
+          <a key={hash} href={explorerTx(hash)} target="_blank" rel="noreferrer">
+            {label}
+          </a>
+        ))}
+      </div>
+      <div className="drop-table">
+        {data.airdrops.map((row) => (
+          <div className="drop-row" key={`${row.to}-${row.tx || "keep"}`}>
+            <code>{shortAddr(row.to)}</code>
+            <b>{fmtAmt(row.amount)} $PONS</b>
+            {row.tx ? (
+              <a href={explorerTx(row.tx)} target="_blank" rel="noreferrer">tx</a>
+            ) : (
+              <span>kept</span>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

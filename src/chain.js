@@ -37,6 +37,9 @@ export function explorerAddress(addr) {
 export function explorerToken(addr) {
   return `${EXPLORER}/token/${addr}`;
 }
+export function explorerTx(hash) {
+  return `${EXPLORER}/tx/${hash}`;
+}
 export const PONSME_TOKEN = "0xe4d7c9fc56fa0dea5099734bbdf657193c6ec384";
 
 const ERC20_BALANCE = "0x70a08231";

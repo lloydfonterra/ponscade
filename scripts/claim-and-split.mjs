@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import {
   createPublicClient,
   createWalletClient,
@@ -317,16 +318,18 @@ async function main() {
     return;
   }
 
+  let hashSweep = "";
+  let hashPot = "";
   if (unswept > 0n && CURVE) {
     console.log(`sweeping unswept curve fees ~${formatEther(unswept)} ETH`);
-    const hash = await claimWallet.writeContract({
+    hashSweep = await claimWallet.writeContract({
       address: CURVE,
       abi: curveAbi,
       functionName: "sweepFees",
       args: [0n],
     });
-    console.log(`  sweep ${EXPLORER}/tx/${hash}`);
-    await publicClient.waitForTransactionReceipt({ hash });
+    console.log(`  sweep ${EXPLORER}/tx/${hashSweep}`);
+    await publicClient.waitForTransactionReceipt({ hash: hashSweep });
   }
 
   const owedAfterSweep = await publicClient.readContract({
@@ -363,7 +366,7 @@ async function main() {
   console.log(`hold 10% ${formatEther(claimed - potAmt - buyAmt)} ETH (burn later)`);
 
   if (potAmt > 0n) {
-    const hashPot = await wallet.sendTransaction({ to: POT, value: potAmt });
+    hashPot = await wallet.sendTransaction({ to: POT, value: potAmt });
     console.log(`pot send ${EXPLORER}/tx/${hashPot}`);
     await publicClient.waitForTransactionReceipt({ hash: hashPot });
   }
@@ -425,6 +428,7 @@ async function main() {
 
   if (eligible.length === 0 || ponsBal === 0n) return;
 
+  const airdrops = [];
   let sent = 0n;
   for (let i = 0; i < eligible.length; i++) {
     const h = eligible[i];
@@ -435,6 +439,7 @@ async function main() {
     if (share === 0n) continue;
     if (h.address.toLowerCase() === OPERATOR.toLowerCase()) {
       console.log(`keep ${formatUnits(share, 18)} PONS on operator (eligible holder)`);
+      airdrops.push({ to: h.address, amount: formatUnits(share, 18), tx: "" });
       sent += share;
       continue;
     }
@@ -449,6 +454,7 @@ async function main() {
     );
     const rcpt = await publicClient.waitForTransactionReceipt({ hash: hashAir });
     if (rcpt.status !== "success") throw new Error(`airdrop to ${h.address} reverted`);
+    airdrops.push({ to: h.address, amount: formatUnits(share, 18), tx: hashAir });
     sent += share;
   }
 
@@ -469,6 +475,30 @@ async function main() {
     airdroppedPons: formatUnits(sent, 18),
     recipients: eligible.length,
   });
+
+  writeFileSync(
+    fileURLToPath(new URL("../public/last-claim.json", import.meta.url)),
+    JSON.stringify(
+      {
+        at: new Date().toISOString(),
+        claimedEth: formatEther(claimed),
+        potEth: formatEther(potAmt),
+        ponsBought: formatUnits(ponsBal, 18),
+        holders: eligible.length,
+        minHold: 1_500_000,
+        txs: {
+          sweep: hashSweep,
+          claim: hashClaim,
+          forward: hashFwd,
+          pot: hashPot,
+          swap: hashSwap,
+        },
+        airdrops,
+      },
+      null,
+      2,
+    ),
+  );
 }
 
 main().catch((err) => {

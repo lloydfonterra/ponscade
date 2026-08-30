@@ -304,6 +304,29 @@ nav button.on {
 .cut-row span, .cut-row b { color: #8a96a8; font-size: 13px; font-weight: 600; }
 .cut-row b { text-align: right; color: #eef2f6; }
 .cut-row i { display: block; height: 6px; background: #5eead4; border-radius: 99px; }
+.last-drop { margin: 48px 0 8px; }
+.drop-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.drop-links a {
+  color: #061018; background: #5eead4; text-decoration: none;
+  padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 700;
+}
+.drop-table {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px; overflow: hidden;
+  background: rgba(12, 16, 24, 0.72);
+}
+.drop-row {
+  display: grid; grid-template-columns: 1fr auto 44px;
+  gap: 12px; align-items: center;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 13px;
+}
+.drop-row:first-child { border-top: 0; }
+.drop-row code { color: #c5ccd8; font-family: "JetBrains Mono", ui-monospace, monospace; }
+.drop-row b { color: #ffb020; font-weight: 700; }
+.drop-row a { color: #5eead4; }
+.drop-row span { color: #6d7a8d; }
 .home-fine { margin-top: 56px; color: #6d7a8d; }
 .home-fine a { color: #eef2f6; }
 
