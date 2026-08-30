@@ -7,7 +7,9 @@ export const ROBINHOOD = {
   blockExplorerUrls: ["https://robinhoodchain.blockscout.com"],
 };
 
-export const PONSCADE_TOKEN = import.meta.env.VITE_PONSCADE_TOKEN || "";
+export const PONSCADE_TOKEN =
+  import.meta.env.VITE_PONSCADE_TOKEN ||
+  "0x7086A13Aa868b2Bf8eD98A86CE1dAAC62eb6a856";
 export const PONSCADE_NAME = "Ponscade";
 export const PONSCADE_SYMBOL = "PONSCADE";
 export const PONS_TOKEN =
