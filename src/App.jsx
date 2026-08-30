@@ -250,12 +250,14 @@ export default function App() {
       {view === "land" && (
         <section className="home">
           <div className="poster-wrap">
-            <p className="home-eyebrow">Robinhood Chain {ROBINHOOD.chainIdDec}</p>
+            <p className="home-eyebrow">Robinhood Chain</p>
             <h1 className="poster">Ponscade</h1>
             <p className="home-sub">Hold. Play. Win the pot.</p>
             <p className="home-lede">
-              Free arcade funded by our Pons fees. One wallet, one name, forever.
-              Ten turns a day. Top {TOP_N} paid at midnight UTC — no connect, no claim.
+              80% of our Pons fees buy $PONS and go to $PONSCADE holders.
+              The more you hold, the larger your share — minimum{" "}
+              {AIRDROP_MIN.toLocaleString()} $PONSCADE. Play the free arcade
+              for the midnight pot. One wallet, one name. No connect.
             </p>
             <div className="home-cta">
               <button className="btn-hot" onClick={goArcade}>Enter arcade</button>
